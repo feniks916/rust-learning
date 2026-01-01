@@ -321,11 +321,14 @@ struct TradingSignal {
     quantity: Option<f64>,
 }
 
-// TODO: Implement validate_signal function
-// Should return Result with price and quantity, or error if something is missing
 fn validate_signal(signal: &TradingSignal) -> Result<(f64, f64), String> {
-    // Your code here
-    todo!()
+    let price = signal.price
+        .ok_or_else(|| format!("Missing price for {} signal", signal.action))?;
+
+    let quantity = signal.quantity
+        .ok_or_else(|| format!("Missing quantity for {} signal", signal.action))?;
+
+    Ok((price, quantity))
 }
 
 fn main() {
@@ -358,11 +361,14 @@ struct Portfolio {
     prices: HashMap<String, f64>,
 }
 
-// TODO: Implement get_position_value function
-// Should return position value (balance * price) or error
 fn get_position_value(portfolio: &Portfolio, asset: &str) -> Result<f64, String> {
-    // Your code here
-    todo!()
+    let balance = portfolio.balances.get(asset)
+        .ok_or_else(|| format!("No balance found for {}", asset))?;
+
+    let price = portfolio.prices.get(asset)
+        .ok_or_else(|| format!("No price found for {}", asset))?;
+
+    Ok(balance * price)
 }
 
 fn main() {
@@ -383,14 +389,25 @@ fn main() {
 ```rust
 use std::collections::HashMap;
 
-// TODO: Implement parse_strategy_config function
-// Should extract all required parameters or return error
 fn parse_strategy_config(
     config: &HashMap<String, String>
 ) -> Result<(f64, f64, u32), String> {
-    // Need to extract: stop_loss, take_profit, max_positions
-    // Your code here
-    todo!()
+    let stop_loss = config.get("stop_loss")
+        .ok_or("Missing stop_loss parameter")?
+        .parse::<f64>()
+        .map_err(|_| "Invalid stop_loss value")?;
+
+    let take_profit = config.get("take_profit")
+        .ok_or("Missing take_profit parameter")?
+        .parse::<f64>()
+        .map_err(|_| "Invalid take_profit value")?;
+
+    let max_positions = config.get("max_positions")
+        .ok_or("Missing max_positions parameter")?
+        .parse::<u32>()
+        .map_err(|_| "Invalid max_positions value")?;
+
+    Ok((stop_loss, take_profit, max_positions))
 }
 
 fn main() {
@@ -413,11 +430,15 @@ struct Position {
     stop_loss: Option<f64>,
 }
 
-// TODO: Implement calculate_position_risk function
-// Should return risk amount in dollars or error if stop_loss is not set
 fn calculate_position_risk(position: &Position) -> Result<f64, String> {
-    // Your code here
-    todo!()
+    let stop_loss = position.stop_loss
+        .ok_or_else(|| format!("No stop loss set for {} position", position.symbol))?;
+
+    // Risk = (Entry - StopLoss) * Quantity
+    let risk_per_unit = (position.entry_price - stop_loss).abs();
+    let total_risk = risk_per_unit * position.quantity;
+
+    Ok(total_risk)
 }
 
 fn main() {

@@ -344,8 +344,7 @@ fn main() {
     println!("Min: {}, Max: {}", min, max);
 }
 
-// TODO: Add lifetime annotations
-fn find_min_max(prices: &[f64]) -> (&f64, &f64) {
+fn find_min_max<'a>(prices: &'a [f64]) -> (&'a f64, &'a f64) {
     let mut min = &prices[0];
     let mut max = &prices[0];
 
@@ -361,15 +360,13 @@ fn find_min_max(prices: &[f64]) -> (&f64, &f64) {
 ### Exercise 2: Struct with References
 
 ```rust
-// TODO: Add lifetime parameter
-struct Trade {
-    symbol: &str,
-    entry_price: &f64,
-    exit_price: &f64,
+struct Trade<'a> {
+    symbol: &'a str,
+    entry_price: &'a f64,
+    exit_price: &'a f64,
 }
 
-impl Trade {
-    // TODO: Add lifetime annotations
+impl<'a> Trade<'a> {
     fn pnl(&self) -> f64 {
         self.exit_price - self.entry_price
     }
@@ -397,13 +394,16 @@ fn main() {
 ### Exercise 3: Filtering with Lifetimes
 
 ```rust
-// TODO: Implement filter_profitable_trades function
-// Should return a vector of references to profitable trades
-
 struct TradeResult<'a> {
     id: u64,
     symbol: &'a str,
     pnl: f64,
+}
+
+fn filter_profitable_trades<'a>(trades: &'a [TradeResult]) -> Vec<&'a TradeResult<'a>> {
+    trades.iter()
+        .filter(|trade| trade.pnl > 0.0)
+        .collect()
 }
 
 fn main() {
@@ -417,9 +417,12 @@ fn main() {
         TradeResult { id: 4, symbol: eth, pnl: -50.0 },
     ];
 
-    // TODO: Implement this function
-    // let profitable = filter_profitable_trades(&trades);
-    // println!("Profitable trades: {}", profitable.len());
+    let profitable = filter_profitable_trades(&trades);
+    println!("Profitable trades: {}", profitable.len());
+
+    for trade in profitable {
+        println!("Trade #{}: {} = ${}", trade.id, trade.symbol, trade.pnl);
+    }
 }
 ```
 

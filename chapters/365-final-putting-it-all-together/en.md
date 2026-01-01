@@ -1687,7 +1687,7 @@ impl<S: Strategy + 'static> TradingBot<S> {
             orderbook,
             candles,
             positions,
-            account_balance: 100000.0, // TODO: Get from exchange
+            account_balance: 100000.0, // In production, get from exchange API
         };
 
         // Generate signal

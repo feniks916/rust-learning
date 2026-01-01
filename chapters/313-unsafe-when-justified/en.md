@@ -530,8 +530,44 @@ extern "C" {
 
 // Your task: implement a safe function
 fn calculate_vwap_safe(prices: &[f64], volumes: &[f64]) -> Result<f64, String> {
-    // TODO: implement checks and unsafe function call
-    todo!()
+    // Check inputs are valid
+    if prices.is_empty() || volumes.is_empty() {
+        return Err("Empty input arrays".to_string());
+    }
+
+    if prices.len() != volumes.len() {
+        return Err("Prices and volumes must have the same length".to_string());
+    }
+
+    // Check for null/invalid values
+    if prices.iter().any(|&p| p <= 0.0 || !p.is_finite()) {
+        return Err("Invalid price values".to_string());
+    }
+
+    if volumes.iter().any(|&v| v <= 0.0 || !v.is_finite()) {
+        return Err("Invalid volume values".to_string());
+    }
+
+    // Call unsafe C function
+    let mut result: f64 = 0.0;
+    let return_code = unsafe {
+        calculate_vwap_c(
+            prices.as_ptr(),
+            volumes.as_ptr(),
+            prices.len(),
+            &mut result as *mut f64,
+        )
+    };
+
+    if return_code != 0 {
+        return Err(format!("C function returned error code: {}", return_code));
+    }
+
+    if !result.is_finite() {
+        return Err("VWAP calculation resulted in invalid value".to_string());
+    }
+
+    Ok(result)
 }
 ```
 
@@ -549,17 +585,29 @@ struct TradeCounter {
 
 impl TradeCounter {
     fn new() -> Self {
-        todo!()
+        TradeCounter {
+            total_trades: AtomicU64::new(0),
+            total_volume: AtomicU64::new(0),
+        }
     }
 
     fn add_trade(&self, volume: f64) {
-        // TODO: atomically increment counters
-        todo!()
+        // Atomically increment trade count
+        self.total_trades.fetch_add(1, Ordering::SeqCst);
+
+        // Convert volume to integer (multiply by 1000 for 3 decimal places)
+        let volume_int = (volume * 1000.0) as u64;
+        self.total_volume.fetch_add(volume_int, Ordering::SeqCst);
     }
 
     fn get_stats(&self) -> (u64, f64) {
-        // TODO: return (number of trades, total volume)
-        todo!()
+        let trades = self.total_trades.load(Ordering::SeqCst);
+        let volume_int = self.total_volume.load(Ordering::SeqCst);
+
+        // Convert back to f64
+        let volume = volume_int as f64 / 1000.0;
+
+        (trades, volume)
     }
 }
 ```
@@ -589,8 +637,29 @@ fn max_drawdown_safe(equity_curve: &[f64]) -> f64 {
 
 /// Your task: create an unsafe optimized version
 fn max_drawdown_unsafe(equity_curve: &[f64]) -> f64 {
-    // TODO: use get_unchecked for speedup
-    todo!()
+    if equity_curve.is_empty() {
+        return 0.0;
+    }
+
+    let mut max_dd = 0.0;
+    let mut peak = unsafe { *equity_curve.get_unchecked(0) };
+
+    // SAFETY: We check that equity_curve is not empty above.
+    // The loop only accesses indices within bounds (0..len).
+    for i in 0..equity_curve.len() {
+        let value = unsafe { *equity_curve.get_unchecked(i) };
+
+        if value > peak {
+            peak = value;
+        }
+
+        let dd = (peak - value) / peak;
+        if dd > max_dd {
+            max_dd = dd;
+        }
+    }
+
+    max_dd
 }
 ```
 
@@ -608,7 +677,40 @@ struct ExchangeConfig {
     timeout_ms: u64,
 }
 
-// TODO: create global configuration and functions to work with it
+// Global configuration using OnceLock
+static CONFIG: OnceLock<ExchangeConfig> = OnceLock::new();
+
+fn init_config(api_url: String, max_reconnects: u32, timeout_ms: u64) {
+    CONFIG.get_or_init(|| ExchangeConfig {
+        api_url,
+        max_reconnects,
+        timeout_ms,
+    });
+}
+
+fn get_config() -> &'static ExchangeConfig {
+    CONFIG.get().expect("Config not initialized")
+}
+
+fn main() {
+    // Initialize configuration once
+    init_config(
+        "https://api.example.com".to_string(),
+        3,
+        5000,
+    );
+
+    // Access configuration safely from anywhere
+    let config = get_config();
+    println!("API URL: {}", config.api_url);
+    println!("Max reconnects: {}", config.max_reconnects);
+    println!("Timeout: {}ms", config.timeout_ms);
+
+    // Attempting to initialize again has no effect
+    init_config("https://different.url".to_string(), 5, 10000);
+    let config2 = get_config();
+    println!("API URL still: {}", config2.api_url); // Still original URL
+}
 ```
 
 ## Homework

@@ -443,8 +443,27 @@ fn main() {
 
     let periods = vec![3, 5, 7, 10];
 
-    // TODO: Launch calculation of each SMA in a separate thread
-    // and print the results
+    // Launch calculation of each SMA in a separate thread
+    let mut handles = vec![];
+
+    for period in periods {
+        let prices_clone = prices.clone();
+        let handle = thread::spawn(move || {
+            let sma = calculate_sma(&prices_clone, period);
+            (period, sma)
+        });
+        handles.push(handle);
+    }
+
+    // Collect and print results
+    println!("Simple Moving Averages:");
+    for handle in handles {
+        let (period, sma) = handle.join().unwrap();
+        match sma {
+            Some(value) => println!("  SMA-{}: ${:.2}", period, value),
+            None => println!("  SMA-{}: Not enough data", period),
+        }
+    }
 }
 ```
 
@@ -468,8 +487,42 @@ fn get_price(exchange: &str, symbol: &str) -> f64 {
 }
 
 fn main() {
-    // TODO: Fetch BTC prices from all exchanges in parallel
+    let exchanges = vec!["Binance", "Coinbase", "Kraken"];
+    let mut handles = vec![];
+
+    // Fetch BTC prices from all exchanges in parallel
+    for exchange in exchanges.iter() {
+        let exchange = exchange.to_string();
+        let handle = thread::spawn(move || {
+            let price = get_price(&exchange, "BTC");
+            (exchange, price)
+        });
+        handles.push(handle);
+    }
+
+    // Collect results
+    let mut prices = vec![];
+    for handle in handles {
+        let (exchange, price) = handle.join().unwrap();
+        println!("{}: ${:.2}", exchange, price);
+        prices.push((exchange, price));
+    }
+
     // Find arbitrage opportunity (difference > 0.1%)
+    let min_price = prices.iter().map(|(_, p)| p).fold(f64::INFINITY, |a, &b| a.min(b));
+    let max_price = prices.iter().map(|(_, p)| p).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let diff_pct = ((max_price - min_price) / min_price) * 100.0;
+
+    println!("\nArbitrage opportunity:");
+    println!("  Min: ${:.2}", min_price);
+    println!("  Max: ${:.2}", max_price);
+    println!("  Difference: {:.2}%", diff_pct);
+
+    if diff_pct > 0.1 {
+        println!("  ✓ Profitable arbitrage available!");
+    } else {
+        println!("  ✗ No significant arbitrage");
+    }
 }
 ```
 
@@ -489,10 +542,40 @@ fn fetch_price(exchange: &str) -> f64 {
 
 fn main() {
     let exchanges = vec!["Binance", "BadExchange", "Coinbase", "Kraken"];
+    let mut handles = vec![];
 
-    // TODO: Launch threads for each exchange
-    // Handle crashes safely
+    // Launch threads for each exchange
+    for exchange in exchanges.iter() {
+        let exchange = exchange.to_string();
+        let handle = thread::spawn(move || {
+            fetch_price(&exchange)
+        });
+        handles.push((exchange.to_string(), handle));
+    }
+
+    // Handle crashes safely and collect successful results
+    let mut successful_prices = vec![];
+
+    for (exchange, handle) in handles {
+        match handle.join() {
+            Ok(price) => {
+                println!("{}: ${:.2} ✓", exchange, price);
+                successful_prices.push(price);
+            }
+            Err(_) => {
+                println!("{}: Failed to fetch price ✗", exchange);
+            }
+        }
+    }
+
     // Calculate average price from successful results only
+    if !successful_prices.is_empty() {
+        let average = successful_prices.iter().sum::<f64>() / successful_prices.len() as f64;
+        println!("\nAverage price from {} exchanges: ${:.2}",
+            successful_prices.len(), average);
+    } else {
+        println!("\nNo successful price fetches!");
+    }
 }
 ```
 

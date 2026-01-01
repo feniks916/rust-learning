@@ -470,7 +470,7 @@ fn main() {
 ```rust
 use std::error::Error;
 
-// TODO: Implement a function that parses a line in format
+// Implement a function that parses a line in format:
 // "BTC,42000.50,0.5,BUY,2024-01-15T10:30:00"
 // and returns a Trade struct
 
@@ -483,8 +483,25 @@ struct Trade {
 }
 
 fn parse_trade_line(line: &str) -> Result<Trade, Box<dyn Error>> {
-    // Your code here
-    todo!()
+    let parts: Vec<&str> = line.split(',').collect();
+
+    if parts.len() != 5 {
+        return Err("Invalid format: expected 5 comma-separated fields".into());
+    }
+
+    let symbol = parts[0].to_string();
+    let price = parts[1].parse::<f64>()?;
+    let quantity = parts[2].parse::<f64>()?;
+    let side = parts[3].to_string();
+    let timestamp = parts[4].to_string();
+
+    Ok(Trade {
+        symbol,
+        price,
+        quantity,
+        side,
+        timestamp,
+    })
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -501,15 +518,45 @@ fn main() -> Result<(), Box<dyn Error>> {
 ```rust
 use std::error::Error;
 
-// TODO: Implement a function that tries to get price from multiple
+// Implement a function that tries to get price from multiple
 // sources and returns the first successful result
 
 fn get_price_with_fallback(symbol: &str) -> Result<f64, Box<dyn Error>> {
-    // Source 1: API (may fail)
-    // Source 2: Cache (may be stale)
-    // Source 3: File (may not exist)
-    // If all fail — return error
-    todo!()
+    // Source 1: Try API (simulated)
+    if let Ok(price) = get_price_from_api(symbol) {
+        return Ok(price);
+    }
+
+    // Source 2: Try cache
+    if let Ok(price) = get_price_from_cache(symbol) {
+        return Ok(price);
+    }
+
+    // Source 3: Try file
+    if let Ok(price) = get_price_from_file(symbol) {
+        return Ok(price);
+    }
+
+    // All sources failed
+    Err(format!("Could not get price for {} from any source", symbol).into())
+}
+
+// Simulated data source functions
+fn get_price_from_api(symbol: &str) -> Result<f64, Box<dyn Error>> {
+    // Simulated API call that might fail
+    if symbol == "BTC" {
+        Ok(42000.0)
+    } else {
+        Err("API error".into())
+    }
+}
+
+fn get_price_from_cache(_symbol: &str) -> Result<f64, Box<dyn Error>> {
+    Err("Cache miss".into())
+}
+
+fn get_price_from_file(_symbol: &str) -> Result<f64, Box<dyn Error>> {
+    Err("File not found".into())
 }
 
 fn main() {
@@ -531,17 +578,45 @@ struct Position {
     entry_price: f64,
 }
 
-// TODO: Implement a portfolio validation function that checks:
-// 1. All symbols are valid (2-10 chars, letters only)
-// 2. All quantities are positive
-// 3. All prices are positive
-// 4. Total value doesn't exceed limit
-
 fn validate_portfolio(
     positions: &[Position],
     max_value: f64,
 ) -> Result<f64, Box<dyn Error>> {
-    todo!()
+    let mut total_value = 0.0;
+
+    for position in positions {
+        // 1. Validate symbol (2-10 chars, letters only)
+        if position.symbol.len() < 2 || position.symbol.len() > 10 {
+            return Err(format!("Invalid symbol length: {}", position.symbol).into());
+        }
+        if !position.symbol.chars().all(|c| c.is_alphabetic()) {
+            return Err(format!("Invalid symbol (non-alphabetic): {}", position.symbol).into());
+        }
+
+        // 2. Validate quantity is positive
+        if position.quantity <= 0.0 {
+            return Err(format!("Negative or zero quantity for {}", position.symbol).into());
+        }
+
+        // 3. Validate price is positive
+        if position.entry_price <= 0.0 {
+            return Err(format!("Negative or zero price for {}", position.symbol).into());
+        }
+
+        // Calculate position value
+        let position_value = position.quantity * position.entry_price;
+        total_value += position_value;
+    }
+
+    // 4. Check total value doesn't exceed limit
+    if total_value > max_value {
+        return Err(format!(
+            "Portfolio value ${:.2} exceeds limit ${:.2}",
+            total_value, max_value
+        ).into());
+    }
+
+    Ok(total_value)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {

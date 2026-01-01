@@ -393,8 +393,19 @@ fn main() {
 // Example: "BINANCE:BTC/USDT:BUY:42000.50:0.5"
 
 fn parse_exchange_message(msg: &str) -> Option<TradeInfo> {
-    // TODO: implement
-    todo!()
+    let parts: Vec<&str> = msg.split(':').collect();
+
+    if parts.len() != 5 {
+        return None;
+    }
+
+    Some(TradeInfo {
+        exchange: parts[0],
+        pair: parts[1],
+        side: parts[2],
+        price: parts[3],
+        quantity: parts[4],
+    })
 }
 
 struct TradeInfo<'a> {
@@ -413,8 +424,17 @@ struct TradeInfo<'a> {
 // "https://ftx.com/api/markets" -> "ftx.com"
 
 fn extract_domain(url: &str) -> Option<&str> {
-    // TODO: implement
-    todo!()
+    // Remove "https://" or "http://"
+    let without_protocol = url.strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))?;
+
+    // Find first '/' to get domain part
+    let domain = without_protocol.split('/').next()?;
+
+    // Remove "api." prefix if present
+    let domain = domain.strip_prefix("api.").unwrap_or(domain);
+
+    Some(domain)
 }
 ```
 
@@ -424,8 +444,15 @@ fn extract_domain(url: &str) -> Option<&str> {
 // "abcd1234efgh5678" -> "abcd********5678"
 
 fn mask_api_key(key: &str) -> String {
-    // TODO: implement
-    todo!()
+    if key.len() <= 8 {
+        return "*".repeat(key.len());
+    }
+
+    let first = &key[..4];
+    let last = &key[key.len() - 4..];
+    let middle_len = key.len() - 8;
+
+    format!("{}{}{}", first, "*".repeat(middle_len), last)
 }
 ```
 
@@ -435,8 +462,23 @@ fn mask_api_key(key: &str) -> String {
 // Return struct with fields: action, amount, asset, price
 
 fn parse_trade_command(cmd: &str) -> Option<TradeCommand> {
-    // TODO: implement
-    todo!()
+    // Expected format: "buy 0.5 BTC at 42000"
+    let parts: Vec<&str> = cmd.split_whitespace().collect();
+
+    if parts.len() != 5 {
+        return None;
+    }
+
+    if parts[3] != "at" {
+        return None;
+    }
+
+    Some(TradeCommand {
+        action: parts[0],    // "buy" or "sell"
+        amount: parts[1],    // "0.5"
+        asset: parts[2],     // "BTC"
+        price: parts[4],     // "42000"
+    })
 }
 
 struct TradeCommand<'a> {

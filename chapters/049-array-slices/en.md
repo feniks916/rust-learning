@@ -393,10 +393,30 @@ fn main() {
         1.8, -0.5, 2.9, -1.5, 3.1, 2.0,   // Second half
     ];
 
-    // TODO: Split the data into two halves and compare:
-    // - Average return
-    // - Maximum drawdown (minimum value)
-    // - Number of profitable months
+    // Split the data into two halves
+    let (first_half, second_half) = monthly_returns.split_at(6);
+
+    // Calculate average return for each half
+    let avg_first: f64 = first_half.iter().sum::<f64>() / first_half.len() as f64;
+    let avg_second: f64 = second_half.iter().sum::<f64>() / second_half.len() as f64;
+
+    // Find maximum drawdown (minimum value)
+    let min_first = first_half.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let min_second = second_half.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+
+    // Count profitable months
+    let profit_first = first_half.iter().filter(|&&x| x > 0.0).count();
+    let profit_second = second_half.iter().filter(|&&x| x > 0.0).count();
+
+    println!("First half:");
+    println!("  Average return: {:.2}%", avg_first);
+    println!("  Max drawdown: {:.2}%", min_first);
+    println!("  Profitable months: {}", profit_first);
+
+    println!("\nSecond half:");
+    println!("  Average return: {:.2}%", avg_second);
+    println!("  Max drawdown: {:.2}%", min_second);
+    println!("  Profitable months: {}", profit_second);
 }
 ```
 
@@ -406,8 +426,12 @@ fn main() {
 fn main() {
     let highs = [42500.0, 42800.0, 42300.0, 43100.0, 42900.0, 43500.0, 43200.0];
 
-    // TODO: Find the maximum for each 3-element window
-    // Use the windows() method
+    // Find the maximum for each 3-element window
+    println!("Rolling 3-period maximum:");
+    for (i, window) in highs.windows(3).enumerate() {
+        let max = window.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        println!("  Window {}: {:?} -> max = {:.2}", i + 1, window, max);
+    }
 }
 ```
 
@@ -417,9 +441,20 @@ fn main() {
 fn main() {
     let mut prices = [100.0, 150.0, 120.0, 180.0, 140.0];
 
-    // TODO: Normalize prices to [0, 1] range
-    // Use mutable slice
-    // Formula: (price - min) / (max - min)
+    // Find min and max prices
+    let min = prices.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let max = prices.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let range = max - min;
+
+    println!("Original prices: {:?}", prices);
+    println!("Min: {:.2}, Max: {:.2}", min, max);
+
+    // Normalize prices to [0, 1] range
+    for price in &mut prices {
+        *price = (*price - min) / range;
+    }
+
+    println!("Normalized prices: {:?}", prices);
 }
 ```
 
@@ -435,8 +470,18 @@ fn main() {
         ("ETH", 5.0, "buy"),
     ];
 
-    // TODO: Using chunks(), process orders in batches of 2
-    // and print information about each batch
+    // Process orders in batches of 2
+    println!("Processing orders in batches of 2:");
+    for (batch_num, batch) in orders.chunks(2).enumerate() {
+        println!("\nBatch {}:", batch_num + 1);
+        for (symbol, qty, side) in batch {
+            println!("  {} {} {} units", side, qty, symbol);
+        }
+
+        // Calculate batch summary
+        let batch_size = batch.len();
+        println!("  Total orders in batch: {}", batch_size);
+    }
 }
 ```
 
